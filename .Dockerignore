@@ -1,0 +1,9 @@
+atvss-obavestenja_files
+__pycache__
+*.html
+.git
+.vs
+.vscode
+.env
+hash
+obavestenja.log
