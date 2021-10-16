@@ -1,0 +1,8 @@
+---
+
+services: 
+    atvss-info:
+
+        image: atvss-info
+        volumes:  
+            - '.:/usr/src/app'
