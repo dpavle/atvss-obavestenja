@@ -63,7 +63,7 @@ def telegram_obavestenje(soup):
     try:  
         poruka = naslov_poruke + '\n' + sadrzaj_poruke # finalna konstrukcija poruke
         bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html') # poruka se salje na telegram kanal
-    except: # ako iz nekog razloga ostane neki nepodrzan HTML tag i gornji send_message ne uspe, poruka se rekonstruise i salje u plain text formatu 
+    except: # ako iz nekog razloga ostane neki nepodrzan HTML tag i gornji send_message ne uspe, poruka se rekonstruise i salje u plain text formatu
         poruka = naslov_poruke + '\n' + sadrzaj.text
         bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html')
 
@@ -75,17 +75,7 @@ def telegram_obavestenje(soup):
 
 def main(): 
 
-    # prethodno generisani inicijalni hash sajta se cita iz fajla 
-    if os.path.isfile('hash'): 
-        with open('hash', 'r') as hash_f:
-            hash_0 = hash_f.read()
-    else:
-        # ako fajl ne postoji, hash se generise pozivom obavestenja_hash funkcije 
-        hash_0 = obavestenja_hash(soupup(URL))
-        # upis generisanog hasha u fajl 'hash.txt'
-        with open('hash', 'w') as hash_f: 
-            hash_f.write(hash_0)
-    
+    hash_0 = obavestenja_hash(soupup(URL))
 
     while True:
         time.sleep(300) # provera se vrsi na svakih 5 minuta 
@@ -96,9 +86,6 @@ def main():
         if hash_0 != hash_1:
             # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo, korisnik se obavestava porukom putem telegram_obavestenje() 
             telegram_obavestenje(soup)
-            # azurni hash se upisuje u fajl 'hash.txt'
-            with open('hash', 'w') as hash_f: 
-                hash_f.write(hash_1)
             # stari i azurni hash se salju u log
             logging.info(hash_0 + " =/= " + hash_1) 
 
