@@ -63,6 +63,7 @@ def telegram_obavestenje(soup):
         poruka = naslov_poruke + '\n' + sadrzaj_poruke # finalna konstrukcija poruke
         bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html') # poruka se salje na telegram kanal
     except: # ako iz nekog razloga ostane neki nepodrzan HTML tag i gornji send_message ne uspe, poruka se rekonstruise i salje u plain text formatu
+        logging.warning('skidanje nepodrzanih HTML tagova neuspesno, saljemo poruku kao plain text bez HTML formatiranja')
         poruka = naslov_poruke + '\n' + sadrzaj.text
         bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html')
 
