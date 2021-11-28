@@ -55,14 +55,17 @@ def telegram_obavestenje(soup):
 
     naslov_poruke = str(naslov).replace("h1", "b") # znamo da se naslov uvek pise u h1, ali h1 nije podrzan od strane Telegram HTML parsera, tako da ga menjamo na podrzan tag 'b'
     sadrzaj_poruke = sadrzaj.text # sadrzaj posta se konvertuje u obican tekstualni objekat, da bi se izbegli HTML tagovi nepodrzani od strane Telegram parsera
-    
+
     for tag in sadrzaj.find_all(): # nalazi se svaki tag u objektu 'sadrzaj'
         # ako je tag podrzan od strane Telegram HTML parsera, taj deo poruke se vraca u HTML oblik
-        if tag.name in ['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 'b', 'i', 's', 'u', 'a', 'a', 'code', 'pre', 'pre', 'code']:
-            sadrzaj_poruke = sadrzaj_poruke.replace(str(tag.string), str(tag)) 
-
-    poruka = naslov_poruke + '\n' + sadrzaj_poruke # finalna konstrukcija poruke
-    bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html') # poruka se salje na telegram kanal
+        if tag.name in ['strong', 'em', 'ins', 'strike', 'del', 'u', 'b', 'i', 's', 'a', 'code', 'pre']:
+            sadrzaj_poruke = sadrzaj_poruke.replace(str(tag.string), str(tag))
+    try:  
+        poruka = naslov_poruke + '\n' + sadrzaj_poruke # finalna konstrukcija poruke
+        bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html') # poruka se salje na telegram kanal
+    except: # ako iz nekog razloga ostane neki nepodrzan HTML tag i gornji send_message ne uspe, poruka se rekonstruise i salje u plain text formatu 
+        poruka = naslov_poruke + '\n' + sadrzaj.text
+        bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html')
 
     # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
     for tag in sadrzaj.find_all('img'): 
