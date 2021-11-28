@@ -18,9 +18,8 @@ load_dotenv()
 # ucitavanje env varijabli
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-
-# globalne varijable
-URL = 'https://vtsnis.edu.rs/obavestenja/' ## NE MENJAJ
+UPDATE_INTERVAL = int(os.getenv('UPDATE_INTERVAL'))
+URL = os.getenv('URL')
 
 # telegram bot objekat
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
@@ -78,7 +77,7 @@ def main():
     hash_0 = obavestenja_hash(soupup(URL))
 
     while True:
-        time.sleep(300) # provera se vrsi na svakih 5 minuta 
+        time.sleep(int(UPDATE_INTERVAL)) # provera se vrsi na svakih 5 minuta 
 
         soup = soupup(URL) # azurna verzija sajta kao BS objekat
         hash_1 = obavestenja_hash(soup) # azurni hash sajta
