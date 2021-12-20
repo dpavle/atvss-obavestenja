@@ -67,11 +67,13 @@ def telegram_obavestenje(soup):
         poruka = naslov_poruke + '\n' + sadrzaj.text
         bot.send_message(TELEGRAM_CHAT_ID, text=poruka, parse_mode='html')
 
-    # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
-    for tag in sadrzaj.find_all('img'): 
-        bot.send_photo(TELEGRAM_CHAT_ID, tag['src'], caption=naslov_poruke, parse_mode='html')
-
-    return sadrzaj_poruke
+    try:
+        # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
+        for tag in sadrzaj.find_all('img'): 
+            bot.send_photo(TELEGRAM_CHAT_ID, tag['src'], caption=naslov_poruke, parse_mode='html')
+    except: 
+        # ako slanje slike uz poruku ne uspe, salje se warning u log i nastavlja se bez slike
+        logging.warning('slanje slike uz poruku neuspesno, saljemo poruku bez slike')
 
 def main(): 
 
