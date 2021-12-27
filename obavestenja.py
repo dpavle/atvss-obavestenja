@@ -51,7 +51,7 @@ class TelegramObavestenje:
         self.html_naslov = naslov
         self.html_sadrzaj = sadrzaj
         
-    def send(self) -> telegram.Message:
+    def send_msg(self) -> telegram.Message:
         ''' Funkcija od dobijenih argumenata konstruiše i šalje poruku na Telegram kanal '''
         try:
             poruka = bot.send_message(TELEGRAM_CHAT_ID, text=self.naslov + self.sadrzaj, parse_mode='html') # poruka se salje na telegram kanal
@@ -59,20 +59,20 @@ class TelegramObavestenje:
             # ako iz nekog razloga ostane neki nepodrzan HTML tag i gornji send_message ne uspe, poruka se rekonstruise i salje u plain text formatu
             logging.warning('skidanje nepodrzanih HTML tagova neuspesno, saljemo poruku kao plain text bez HTML formatiranja')
             poruka = bot.send_message(TELEGRAM_CHAT_ID, text=self.naslov + self.html_sadrzaj.text, parse_mode='html')
-        try:
-            # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
-            for tag in self.html_sadrzaj.find_all('img'): 
-                bot.send_photo(TELEGRAM_CHAT_ID, tag['src'], caption=self.naslov, parse_mode='html')
-        except: 
-            # ako slanje slike uz poruku ne uspe, salje se warning u log i nastavlja se bez slike
-            logging.warning('slanje slike uz poruku neuspesno, saljemo poruku bez slike')
         return poruka
 
+    def send_img(self, src) -> telegram.Message:    
+        try:
+            bot.send_photo(TELEGRAM_CHAT_ID, src, parse_mode='html')
+        except:
+            # ako slanje slike uz poruku ne uspe, salje se warning u log i nastavlja se bez slike
+            logging.warning('slanje slike uz poruku neuspesno, saljemo poruku bez slike')
+        
     def edit(self, poruka) -> telegram.Message:
         ''' Funkcija edituje prethodno poslatu poruku'''
         try:
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text=self.naslov + '\n' + self.sadrzaj, parse_mode='html')
-        except: 
+        except:
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text=self.naslov + '\n' + self.html_sadrzaj.text, parse_mode='html')
         return poruka
 
@@ -93,10 +93,15 @@ def main():
             obavestenje = TelegramObavestenje(naslov, sadrzaj)
 
             if slicnost(obavestenje.naslov, prethodni_naslov) < 0.8:
-                aktuelna_poruka = obavestenje.send() # korisnik se obavestava porukom putem obavestenje.send() 
+                aktuelna_poruka = obavestenje.send_msg() # korisnik se obavestava porukom putem obavestenje.send() 
+        
+                # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
+                if len(sadrzaj.find_all('img')) > 0: 
+                    for tag in sadrzaj.find_all('img'): 
+                        obavestenje.send_img(tag['src'])
             else:
                 aktuelna_poruka = obavestenje.edit(aktuelna_poruka)
-        
+
             logging.info(hash_0 + " =/= " + hash_1) # stari i azurni hash se salju u log
 
             prethodni_naslov = obavestenje.naslov # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
