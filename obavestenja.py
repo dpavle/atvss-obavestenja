@@ -25,7 +25,7 @@ URL = os.getenv('URL')
 # telegram bot objekat
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
 
-def slicnost(a, b) -> float: 
+def poklapanje(a, b) -> float: 
     ''' Funkcija poredi objekte a i b i vraća odnos poklapanja 0-1 '''
     return SequenceMatcher(None, a, b).ratio()
 
@@ -80,6 +80,7 @@ def main():
     sajt = Sajt(URL) # inicijalni instance sajta
     hash_0 = hash(sajt.soup.select('div[class="site-content"]')) # inicijalni hash sajta
     prethodni_naslov = ''
+    prethodni_sadrzaj = ''
 
     while True:
         time.sleep(int(UPDATE_INTERVAL)) # provera se vrsi na svakih 5 minuta 
@@ -91,10 +92,8 @@ def main():
 
         if hash_0 != hash_1: # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo
             obavestenje = TelegramObavestenje(naslov, sadrzaj)
-
-            if slicnost(obavestenje.naslov, prethodni_naslov) < 0.8:
+            if poklapanje(obavestenje.naslov, prethodni_naslov) < 0.85 or poklapanje(obavestenje.sadrzaj, prethodni_sadrzaj) < 0.85:
                 aktuelna_poruka = obavestenje.send_msg() # korisnik se obavestava porukom putem obavestenje.send() 
-        
                 # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0: 
                     for tag in sadrzaj.find_all('img'): 
@@ -105,6 +104,7 @@ def main():
             logging.info(hash_0 + " =/= " + hash_1) # stari i azurni hash se salju u log
 
             prethodni_naslov = obavestenje.naslov # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
+            prethodni_sadrzaj = obavestenje.sadrzaj # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poredjenja sa sadrzajem sledećeg obaveštenja
             hash_0 = hash_1 # pocetna vrednost hasha se setuje na novu azurnu vrednost
 
         else:
