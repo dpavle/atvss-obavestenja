@@ -54,11 +54,11 @@ class TelegramObavestenje:
     def send_msg(self) -> telegram.Message:
         ''' Funkcija od dobijenih argumenata konstruiše i šalje poruku na Telegram kanal '''
         try:
-            poruka = bot.send_message(TELEGRAM_CHAT_ID, text=self.naslov + self.sadrzaj, parse_mode='html') # poruka se salje na telegram kanal
+            poruka = bot.send_message(TELEGRAM_CHAT_ID, text="\n".join([self.naslov, self.sadrzaj]), parse_mode='html') # poruka se salje na telegram kanal
         except:
             # ako iz nekog razloga ostane neki nepodrzan HTML tag i gornji send_message ne uspe, poruka se rekonstruise i salje u plain text formatu
             logging.warning('skidanje nepodrzanih HTML tagova neuspesno, saljemo poruku kao plain text bez HTML formatiranja')
-            poruka = bot.send_message(TELEGRAM_CHAT_ID, text=self.naslov + self.html_sadrzaj.text, parse_mode='html')
+            poruka = bot.send_message(TELEGRAM_CHAT_ID, text="\n".join([self.naslov, self.html_sadrzaj.text]), parse_mode='html')
         return poruka
 
     def send_img(self, src) -> telegram.Message:    
@@ -71,9 +71,9 @@ class TelegramObavestenje:
     def edit(self, poruka) -> telegram.Message:
         ''' Funkcija edituje prethodno poslatu poruku'''
         try:
-            poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text=self.naslov + '\n' + self.sadrzaj, parse_mode='html')
+            poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text="\n".join([self.naslov, self.sadrzaj]), parse_mode='html')
         except:
-            poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text=self.naslov + '\n' + self.html_sadrzaj.text, parse_mode='html')
+            poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text="\n".join([self.naslov, self.html_sadrzaj.text]), parse_mode='html')
         return poruka
 
 def main():  
