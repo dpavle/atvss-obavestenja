@@ -11,7 +11,8 @@ from difflib import SequenceMatcher
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 
-logging.basicConfig(filename='obavestenja.log', encoding='utf-8', level=logging.DEBUG) # log se salje u obavestenja.log
+# statičke globalne varijable
+URL = "https://vtsnis.edu.rs/obavestenja/"
 
 # ucitavanje env varijabli iz .env fajla
 load_dotenv()
@@ -20,10 +21,11 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 UPDATE_INTERVAL = int(os.getenv('UPDATE_INTERVAL'))
-URL = os.getenv('URL')
 
 # telegram bot objekat
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
+
+logging.basicConfig(filename='obavestenja.log', encoding='utf-8', level=logging.DEBUG) # log se salje u obavestenja.log
 
 def poklapanje(a, b) -> float: 
     ''' Funkcija poredi objekte a i b i vraća odnos poklapanja 0-1 '''
@@ -83,7 +85,7 @@ def main():
     prethodni_sadrzaj = ''
 
     while True:
-        time.sleep(int(UPDATE_INTERVAL)) # provera se vrsi na svakih 5 minuta 
+        time.sleep(UPDATE_INTERVAL) # provera se vrsi na svakih UPDATE_INTERVAL sekundi
 
         sajt = Sajt(URL) # azurni instance sajta 
         hash_1 = hash(sajt.soup.select('div[class="site-content"]')) # azurni hash sajta
