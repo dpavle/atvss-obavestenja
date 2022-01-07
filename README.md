@@ -1,5 +1,7 @@
 # ATVSS Obaveštenja
 
+[![Actions Status](https://github.com/dpavle/atvss-obavestenja/workflows/Docker%20Hub/badge.svg)](https://github.com/dpavle/atvss-obavestenja/actions)
+
 Python skripta koja dobavlja najnovija obaveštenja sa ATVSS sajta (vtsnis.edu.rs). 
 
 Sajt se čekira za promene u datom intervalu i aktuelna obaveštenja šaljemo na dati Telegram kanal. 
