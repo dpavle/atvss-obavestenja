@@ -3,6 +3,7 @@
 import os 
 import time
 import hashlib
+from urllib.error import URLError
 import telegram
 import logging
 
@@ -25,7 +26,7 @@ UPDATE_INTERVAL = int(os.getenv('UPDATE_INTERVAL'))
 # telegram bot objekat
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
 
-logging.basicConfig(filename='obavestenja.log', encoding='utf-8', level=logging.DEBUG) # log se salje u obavestenja.log
+logging.basicConfig(filename='./obavestenja.log', encoding='utf-8', level=logging.DEBUG) # log se salje u obavestenja.log
 
 def poklapanje(a, b) -> float: 
     ''' Funkcija poredi objekte a i b i vraća odnos poklapanja 0-1 '''
@@ -37,8 +38,18 @@ def hash(content) -> str:
 
 class Sajt:
     def __init__(self, url):
-        self.html = urlopen(Request(url, headers={'User-Agent': 'Mozilla/5.0'})).read()
-        self.soup = BeautifulSoup(self.html, features="html.parser")
+        for p in range(16): 
+            try:
+                self.html = urlopen(Request(url, headers={'User-Agent': 'Mozilla/5.0'})).read()
+                self.soup = BeautifulSoup(self.html, features="html.parser")
+            except URLError as error: 
+                logging.error(f'{error} - greška pri učitavanju sajta. pokušavamo ponovo. . . ({p}/16)')
+                time.sleep(UPDATE_INTERVAL)
+            else:
+                break
+        else: 
+            logging.error('svi pokušaji učitavanja sajta neuspeli. proverite internet konekciju')
+            exit()
 
 class TelegramObavestenje: 
     def __init__(self, naslov, sadrzaj):
@@ -56,29 +67,30 @@ class TelegramObavestenje:
     def send_msg(self) -> telegram.Message:
         ''' Funkcija od dobijenih argumenata konstruiše i šalje poruku na Telegram kanal '''
         try:
-            poruka = bot.send_message(TELEGRAM_CHAT_ID, text="\n".join([self.naslov, self.sadrzaj]), parse_mode='html') # poruka se salje na telegram kanal
-        except:
-            # ako iz nekog razloga ostane neki nepodrzan HTML tag i gornji send_message ne uspe, poruka se rekonstruise i salje u plain text formatu
-            logging.warning('skidanje nepodrzanih HTML tagova neuspesno, saljemo poruku kao plain text bez HTML formatiranja')
+            poruka = bot.send_message(TELEGRAM_CHAT_ID, text="\n".join([self.naslov, str(self.html_sadrzaj)]), parse_mode='html') # poruka se salje na telegram kanal
+        except telegram.error.BadRequest as err:
+            # ako iz nekog razloga ostane neki nepodržan HTML tag i gornji send_message ne uspe, poruka se rekonstruiše i šalje u plain text formatu
+            logging.warning(f'{err} - skidanje nepodržanih HTML tagova neuspešno, šaljemo poruku kao plain text bez HTML formatiranja')
             poruka = bot.send_message(TELEGRAM_CHAT_ID, text="\n".join([self.naslov, self.html_sadrzaj.text]), parse_mode='html')
         return poruka
 
-    def send_img(self, src) -> telegram.Message:    
+    def send_img(self, src) -> telegram.Message: 
         try:
             bot.send_photo(TELEGRAM_CHAT_ID, src, parse_mode='html')
-        except:
+        except telegram.error.BadRequest as err:
             # ako slanje slike uz poruku ne uspe, salje se warning u log i nastavlja se bez slike
-            logging.warning('slanje slike uz poruku neuspesno, saljemo poruku bez slike')
+            logging.warning(f'{err} - slanje slike uz poruku neuspešno, šaljemo poruku bez slike')
         
     def edit(self, poruka) -> telegram.Message:
         ''' Funkcija edituje prethodno poslatu poruku'''
         try:
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text="\n".join([self.naslov, self.sadrzaj]), parse_mode='html')
-        except:
+        except telegram.error.BadRequest as err:
+            logging.warning(f'{err} - skidanje nepodržanih HTML tagova neuspešno, šaljemo poruku kao plain text bez HTML formatiranja')
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID, message_id=poruka.message_id, text="\n".join([self.naslov, self.html_sadrzaj.text]), parse_mode='html')
         return poruka
 
-def main():  
+def main():
     sajt = Sajt(URL) # inicijalni instance sajta
     hash_0 = hash(sajt.soup.select('div[class="site-content"]')) # inicijalni hash sajta
     prethodni_naslov = ''
@@ -106,7 +118,7 @@ def main():
             logging.info(hash_0 + " =/= " + hash_1) # stari i azurni hash se salju u log
 
             prethodni_naslov = obavestenje.naslov # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
-            prethodni_sadrzaj = obavestenje.html_sadrzaj.text # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poredjenja sa sadrzajem sledećeg obaveštenja
+            prethodni_sadrzaj = obavestenje.html_sadrzaj.text # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poređenja sa sadržajem sledećeg obaveštenja
             hash_0 = hash_1 # pocetna vrednost hasha se setuje na novu azurnu vrednost
 
         else:
