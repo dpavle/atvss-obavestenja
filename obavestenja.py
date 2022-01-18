@@ -94,7 +94,7 @@ def main():
 
         if hash_0 != hash_1: # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo
             obavestenje = TelegramObavestenje(naslov, sadrzaj)
-            if poklapanje(obavestenje.naslov, prethodni_naslov) < 0.85 or poklapanje(obavestenje.sadrzaj, prethodni_sadrzaj) < 0.85:
+            if poklapanje(obavestenje.naslov, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj.text, prethodni_sadrzaj) < 0.85:
                 aktuelna_poruka = obavestenje.send_msg() # korisnik se obavestava porukom putem obavestenje.send() 
                 # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0: 
@@ -106,7 +106,7 @@ def main():
             logging.info(hash_0 + " =/= " + hash_1) # stari i azurni hash se salju u log
 
             prethodni_naslov = obavestenje.naslov # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
-            prethodni_sadrzaj = obavestenje.sadrzaj # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poredjenja sa sadrzajem sledećeg obaveštenja
+            prethodni_sadrzaj = obavestenje.html_sadrzaj.text # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poredjenja sa sadrzajem sledećeg obaveštenja
             hash_0 = hash_1 # pocetna vrednost hasha se setuje na novu azurnu vrednost
 
         else:
