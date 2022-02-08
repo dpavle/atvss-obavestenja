@@ -13,7 +13,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 
 # statičke globalne varijable
-URL = "https://vtsnis.edu.rs/obavestenja/"
+URL = "https://vtsnis.edu.rs/studenti"
 
 # ucitavanje env varijabli iz .env fajla
 load_dotenv()
@@ -54,7 +54,7 @@ class Sajt:
 class TelegramObavestenje: 
     def __init__(self, naslov, sadrzaj):
         # formatiranje naslova
-        self.naslov = str(naslov).replace("h1", "b") # znamo da se naslov uvek piše u h1, h1 nije podržan pa ga menjamo u b
+        self.naslov = str(naslov).replace("h3", "b") # znamo da se naslov uvek piše u h1, h1 nije podržan pa ga menjamo u b
         # formatiranje sadrzaja
         self.sadrzaj = sadrzaj.text # sadrzaj se prvo konvertuje u plain text format
         for tag in sadrzaj.find_all():
@@ -101,8 +101,8 @@ def main():
 
         sajt = Sajt(URL) # azurni instance sajta 
         hash_1 = hash(sajt.soup.select('div[class="site-content"]')) # azurni hash sajta
-        naslov = sajt.soup.select('h1[class="entry-title"]')[0] # prvi element liste naslova svih obavestenja sa sajta
-        sadrzaj = sajt.soup.select('div[class="entry-content"]')[0] # prvi element liste sadrzaja svih obavestenja sa sajta
+        naslov = sajt.soup.select('h3[class="subheading"]')[0] # prvi element liste naslova svih obavestenja sa sajta
+        sadrzaj = sajt.soup.select('div[class="timeline-body"]')[0] # prvi element liste sadrzaja svih obavestenja sa sajta
 
         if hash_0 != hash_1: # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo
             obavestenje = TelegramObavestenje(naslov, sadrzaj)
