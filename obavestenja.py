@@ -13,7 +13,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 
 # statičke globalne varijable
-URL = "https://vtsnis.edu.rs/studenti"
+URL = ["https://vtsnis.edu.rs/obavestenja/", "https://vtsnis.edu.rs/studenti/"]
 
 # ucitavanje env varijabli iz .env fajla
 load_dotenv()
@@ -54,7 +54,8 @@ class Sajt:
 class TelegramObavestenje: 
     def __init__(self, naslov, sadrzaj):
         # formatiranje naslova
-        self.naslov = str(naslov).replace("h3", "b") # znamo da se naslov uvek piše u h1, h1 nije podržan pa ga menjamo u b
+        self.naslov = str(naslov).replace("h1", "b").replace("h3", "b") # znamo da se naslov uvek piše u h3, h3 nije podržan pa ga menjamo u b
+
         # formatiranje sadrzaja
         self.sadrzaj = sadrzaj.text # sadrzaj se prvo konvertuje u plain text format
         for tag in sadrzaj.find_all():
@@ -91,22 +92,30 @@ class TelegramObavestenje:
         return poruka
 
 def main():
-    sajt = Sajt(URL) # inicijalni instance sajta
-    hash_0 = hash(sajt.soup.select('div[class="site-content"]')) # inicijalni hash sajta
+
+    studenti_inithash = hash(Sajt(URL[0]).soup.select('div[class="site-content"]')) # inicijalni hash sajta
+    obavestenja_inithash = hash(Sajt(URL[1]).soup.select('div[class="site-content"]')) 
+
     prethodni_naslov = ''
     prethodni_sadrzaj = ''
 
     while True:
         time.sleep(UPDATE_INTERVAL) # provera se vrsi na svakih UPDATE_INTERVAL sekundi
 
-        sajt = Sajt(URL) # azurni instance sajta 
-        hash_1 = hash(sajt.soup.select('div[class="site-content"]')) # azurni hash sajta
-        naslov = sajt.soup.select('h3[class="subheading"]')[0] # prvi element liste naslova svih obavestenja sa sajta
-        sadrzaj = sajt.soup.select('div[class="timeline-body"]')[0] # prvi element liste sadrzaja svih obavestenja sa sajta
+        studenti = Sajt(URL[0]) # ažurni instance sajta
+        obavestenja = Sajt(URL[1]) 
 
-        if hash_0 != hash_1: # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo
+        studenti_newhash = hash(studenti.soup.select('div[class="site-content"]')) # ažurni hash sajta
+        obavestenja_newhash = hash(obavestenja.soup.select('div[class="site-content"]')) 
+
+        if studenti_inithash != studenti_newhash: # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo
+           
+            naslov = studenti.soup.select('h3[class="subheading"]')[0] # prvi element liste naslova svih obavestenja sa sajta
+            sadrzaj = studenti.soup.select('div[class="timeline-body"]')[0] # prvi element liste sadrzaja svih obavestenja sa sajta
+            
             obavestenje = TelegramObavestenje(naslov, sadrzaj)
-            if poklapanje(obavestenje.naslov, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj.text, prethodni_sadrzaj) < 0.85:
+
+            if poklapanje(obavestenje.html_naslov.text, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj.text, prethodni_sadrzaj) < 0.85:
                 aktuelna_poruka = obavestenje.send_msg() # korisnik se obavestava porukom putem obavestenje.send() 
                 # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0: 
@@ -115,12 +124,36 @@ def main():
             else:
                 aktuelna_poruka = obavestenje.edit(aktuelna_poruka)
 
-            logging.info(hash_0 + " =/= " + hash_1) # stari i azurni hash se salju u log
+            logging.info(studenti_inithash + " =/= " + studenti_newhash) # stari i azurni hash se salju u log
 
-            prethodni_naslov = obavestenje.naslov # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
+            prethodni_naslov = obavestenje.html_naslov.text # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
             prethodni_sadrzaj = obavestenje.html_sadrzaj.text # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poređenja sa sadržajem sledećeg obaveštenja
-            hash_0 = hash_1 # pocetna vrednost hasha se setuje na novu azurnu vrednost
+            studenti_inithash = studenti_newhash # pocetna vrednost hasha se setuje na novu azurnu vrednost
 
+        elif obavestenja_inithash != obavestenja_newhash:
+
+            naslov = obavestenja.soup.select('h1[class="entry-title"]')[0] # prvi element liste naslova svih obavestenja sa sajta
+            sadrzaj = obavestenja.soup.select('div[class="entry-content"]')[0] # prvi element liste sadrzaja svih obavestenja sa sajta
+
+            obavestenje = TelegramObavestenje(naslov, sadrzaj)
+            
+            if poklapanje(obavestenje.html_naslov.text, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj.text, prethodni_sadrzaj) < 0.85:
+                aktuelna_poruka = obavestenje.send_msg() # korisnik se obavestava porukom putem obavestenje.send() 
+                # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
+                if len(sadrzaj.find_all('img')) > 0: 
+                    for tag in sadrzaj.find_all('img'): 
+                        obavestenje.send_img(tag['src'])
+            else:
+                try:
+                    aktuelna_poruka = obavestenje.edit(aktuelna_poruka)
+                except telegram.error.BadRequest: 
+                    pass
+
+            logging.info(obavestenja_inithash + " =/= " + obavestenja_newhash) # stari i azurni hash se salju u log
+
+            prethodni_naslov = obavestenje.html_naslov.text # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
+            prethodni_sadrzaj = obavestenje.html_sadrzaj.text # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poređenja sa sadržajem sledećeg obaveštenja
+            obavestenja_inithash = obavestenja_newhash # pocetna vrednost hasha se setuje na novu azurnu vrednost 
         else:
             continue
 
