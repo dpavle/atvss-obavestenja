@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import http.client
 import os 
 import time
 import hashlib
@@ -13,7 +14,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 
 # statičke globalne varijable
-URL = ["https://vtsnis.edu.rs/obavestenja/", "https://vtsnis.edu.rs/studenti/"]
+URL = ["https://vtsnis.edu.rs/studenti/", "https://vtsnis.edu.rs/obavestenja/"]
 
 # ucitavanje env varijabli iz .env fajla
 load_dotenv()
@@ -42,11 +43,10 @@ class Sajt:
             try:
                 self.html = urlopen(Request(url, headers={'User-Agent': 'Mozilla/5.0'})).read()
                 self.soup = BeautifulSoup(self.html, features="html.parser")
-            except URLError as error: 
+                break
+            except (URLError, http.client.RemoteDisconnected) as error: 
                 logging.error(f'{error} - greška pri učitavanju sajta. pokušavamo ponovo. . . ({p}/16)')
                 time.sleep(UPDATE_INTERVAL)
-            else:
-                break
         else: 
             logging.error('svi pokušaji učitavanja sajta neuspeli. proverite internet konekciju')
             exit()
@@ -93,8 +93,11 @@ class TelegramObavestenje:
 
 def main():
 
-    studenti_inithash = hash(Sajt(URL[0]).soup.select('div[class="site-content"]')) # inicijalni hash sajta
-    obavestenja_inithash = hash(Sajt(URL[1]).soup.select('div[class="site-content"]')) 
+    studenti = Sajt(URL[0]) # ažurni instance sajta
+    obavestenja = Sajt(URL[1]) 
+ 
+    studenti_inithash = hash(studenti.soup.select('div[class="site-content"]')) # inicijalni hash sajta
+    obavestenja_inithash = hash(obavestenja.soup.select('div[class="site-content"]')) 
 
     prethodni_naslov = ''
     prethodni_sadrzaj = ''
@@ -109,7 +112,7 @@ def main():
         obavestenja_newhash = hash(obavestenja.soup.select('div[class="site-content"]')) 
 
         if studenti_inithash != studenti_newhash: # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo
-           
+        
             naslov = studenti.soup.select('h3[class="subheading"]')[0] # prvi element liste naslova svih obavestenja sa sajta
             sadrzaj = studenti.soup.select('div[class="timeline-body"]')[0] # prvi element liste sadrzaja svih obavestenja sa sajta
             
