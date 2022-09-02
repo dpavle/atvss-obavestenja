@@ -96,8 +96,8 @@ def main():
     studenti = Sajt(URL[0]) # ažurni instance sajta
     obavestenja = Sajt(URL[1]) 
  
-    studenti_inithash = hash(studenti.soup.select('div[class="site-content"]')) # inicijalni hash sajta
-    obavestenja_inithash = hash(obavestenja.soup.select('div[class="site-content"]')) 
+    studenti_inithash = hash(studenti.soup.select('div[class=timeline-body]')[0]) # inicijalni hash sajta
+    obavestenja_inithash = hash(obavestenja.soup.select("article")[0])
 
     prethodni_naslov = ''
     prethodni_sadrzaj = ''
@@ -108,8 +108,8 @@ def main():
         studenti = Sajt(URL[0]) # ažurni instance sajta
         obavestenja = Sajt(URL[1]) 
 
-        studenti_newhash = hash(studenti.soup.select('div[class="site-content"]')) # ažurni hash sajta
-        obavestenja_newhash = hash(obavestenja.soup.select('div[class="site-content"]')) 
+        studenti_newhash = hash(studenti.soup.select('div[class=timeline-body]')[0]) # ažurni hash sajta
+        obavestenja_newhash = hash(obavestenja.soup.select("article")[0]) 
 
         if studenti_inithash != studenti_newhash: # ako se pocetni i azurni hash razlikuju, stanje na sajtu se promenilo
         
