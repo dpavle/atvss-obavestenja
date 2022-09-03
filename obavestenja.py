@@ -14,7 +14,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 
 # statičke globalne varijable
-URL = ["https://vtsnis.edu.rs/studenti/", "https://vtsnis.edu.rs/obavestenja/"]
+URL = ["https://odseknis.akademijanis.edu.rs/studenti/", "https://odseknis.akademijanis.edu.rs/obavestenja/"]
 
 # ucitavanje env varijabli iz .env fajla
 load_dotenv()
