@@ -62,8 +62,8 @@ class TelegramObavestenje:
             if tag.name in ['strong', 'em', 'ins', 'strike', 'del', 'u', 'b', 'i', 's', 'a', 'code', 'pre']: # ako se u originalnom html obliku sadryaja nadju podrzani tagovi
                 self.sadrzaj = self.sadrzaj.replace(str(tag.string), str(tag)) # ti tagovi se konvertuju nazad u html na izlazu
         
-        self.html_naslov = naslov
-        self.html_sadrzaj = sadrzaj
+        self.html_naslov = self.naslov
+        self.html_sadrzaj = self.sadrzaj
         
     def send_msg(self) -> telegram.Message:
         ''' Funkcija od dobijenih argumenata konstruiše i šalje poruku na Telegram kanal '''
@@ -118,7 +118,7 @@ def main():
             
             obavestenje = TelegramObavestenje(naslov, sadrzaj)
 
-            if poklapanje(obavestenje.html_naslov.text, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj.text, prethodni_sadrzaj) < 0.85:
+            if poklapanje(obavestenje.html_naslov, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj, prethodni_sadrzaj) < 0.85:
                 aktuelna_poruka = obavestenje.send_msg() # korisnik se obavestava porukom putem obavestenje.send() 
                 # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0: 
@@ -129,8 +129,8 @@ def main():
 
             logging.info(studenti_inithash + " =/= " + studenti_newhash) # stari i azurni hash se salju u log
 
-            prethodni_naslov = obavestenje.html_naslov.text # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
-            prethodni_sadrzaj = obavestenje.html_sadrzaj.text # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poređenja sa sadržajem sledećeg obaveštenja
+            prethodni_naslov = obavestenje.html_naslov # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
+            prethodni_sadrzaj = obavestenje.html_sadrzaj # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poređenja sa sadržajem sledećeg obaveštenja
             studenti_inithash = studenti_newhash # pocetna vrednost hasha se setuje na novu azurnu vrednost
 
         elif obavestenja_inithash != obavestenja_newhash:
@@ -140,7 +140,7 @@ def main():
 
             obavestenje = TelegramObavestenje(naslov, sadrzaj)
             
-            if poklapanje(obavestenje.html_naslov.text, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj.text, prethodni_sadrzaj) < 0.85:
+            if poklapanje(obavestenje.html_naslov, prethodni_naslov) < 0.85 or poklapanje(obavestenje.html_sadrzaj, prethodni_sadrzaj) < 0.85:
                 aktuelna_poruka = obavestenje.send_msg() # korisnik se obavestava porukom putem obavestenje.send() 
                 # ako su uz obavestenje prilozene slike, te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0: 
@@ -154,8 +154,8 @@ def main():
 
             logging.info(obavestenja_inithash + " =/= " + obavestenja_newhash) # stari i azurni hash se salju u log
 
-            prethodni_naslov = obavestenje.html_naslov.text # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
-            prethodni_sadrzaj = obavestenje.html_sadrzaj.text # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poređenja sa sadržajem sledećeg obaveštenja
+            prethodni_naslov = obavestenje.html_naslov # naslov poslatog obavestenja se setuje kao prethodni_naslov, radi poredjenja sa naslovom sledećeg obaveštenja
+            prethodni_sadrzaj = obavestenje.html_sadrzaj # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj, radi poređenja sa sadržajem sledećeg obaveštenja
             obavestenja_inithash = obavestenja_newhash # pocetna vrednost hasha se setuje na novu azurnu vrednost 
         else:
             continue
