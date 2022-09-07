@@ -184,14 +184,14 @@ def main():
 
             if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
                 # korisnik se obavestava porukom putem tg.send_msg()
-                aktuelna_poruka = tg.send_msg()
+                telegram_poruka = tg.send_msg()
                 # ako su uz obavestenje prilozene slike,
                 # te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0:
                     for tag in sadrzaj.find_all('img'):
                         tg.send_img(tag['src'])
             else:
-                aktuelna_poruka = tg.edit_msg(aktuelna_poruka)
+                telegram_poruka = tg.edit_msg(telegram_poruka)
             # stari i azurni hash se salju u log
             logging.info(studenti_inithash + " =/= " + studenti_newhash)
 
@@ -223,7 +223,7 @@ def main():
 
             if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
                 # korisnik se obavestava porukom putem tg.send_msg()
-                aktuelna_poruka = tg.send_msg()
+                telegram_poruka = tg.send_msg()
                 # ako su uz obavestenje prilozene slike,
                 # te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0:
@@ -231,7 +231,7 @@ def main():
                         tg.send_img(tag['src'])
             else:
                 try:
-                    aktuelna_poruka = tg.edit_msg(aktuelna_poruka)
+                    telegram_poruka = tg.edit_msg(telegram_poruka)
                 except telegram.error.BadRequest:
                     pass
 
