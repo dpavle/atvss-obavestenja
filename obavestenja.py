@@ -67,6 +67,13 @@ class Sajt:
 
 class TelegramObavestenje:
     def __init__(self, naslov, sadrzaj):
+        ''' init funkcija obrađuje naslov i sadržaj
+            u oblik pogodan za slanje preko Telegrama '''
+        # cuvamo tekstualne oblike naslova i sadrzaja
+        # (bez HTML formatiranja)
+        self.naslov_text = naslov.text
+        self.sadrzaj_text = sadrzaj.text
+
         # formatiranje naslova
         self.naslov = str(naslov).replace("h1", "b").replace("h3", "b")
         # znamo da se naslov uvek piše u h3, h3 nije podržan pa ga menjamo u b
@@ -74,23 +81,18 @@ class TelegramObavestenje:
         # formatiranje sadrzaja
         self.sadrzaj = sadrzaj.text  # sadrzaj se prvo konvertuje u plain text
         for tag in sadrzaj.find_all():
-
             # ako se u originalnom html obliku sadrzaja nadju podrzani tagovi
             if tag.name in ['strong', 'em', 'ins', 'strike', 'del', 'u',
                             'b', 'i', 's', 'a', 'code', 'pre']:
                 # ti tagovi se konvertuju nazad u html na izlazu
                 self.sadrzaj = self.sadrzaj.replace(str(tag.string), str(tag))
 
-        self.html_naslov = self.naslov
-        self.html_sadrzaj = self.sadrzaj
-
     def send_msg(self) -> telegram.Message:
-        ''' Funkcija od dobijenih argumenata
-            konstruiše i šalje poruku na Telegram kanal '''
+        ''' Funkcija konstruiše i šalje poruku na Telegram kanal '''
         try:
             poruka = bot.send_message(TELEGRAM_CHAT_ID,
                                       text="\n".join([self.naslov,
-                                                      str(self.html_sadrzaj)]),
+                                                      self.sadrzaj]),
                                       parse_mode='html')
         except telegram.error.BadRequest as err:
             # ako ostane neki nepodržan HTML tag i send_message ne uspe,
@@ -99,8 +101,8 @@ class TelegramObavestenje:
                 f'''{err} - skidanje nepodržanih HTML tagova neuspešno,
                 šaljemo poruku kao plain text bez HTML formatiranja''')
             poruka = bot.send_message(TELEGRAM_CHAT_ID,
-                                      text="\n".join([self.naslov,
-                                                      self.html_sadrzaj.text]),
+                                      text="\n".join([self.naslov_text,
+                                                      self.sadrzaj_text]),
                                       parse_mode='html')
         return poruka
 
@@ -113,14 +115,13 @@ class TelegramObavestenje:
             logging.warning(f'''{err} - slanje slike uz poruku neuspešno,
                             šaljemo poruku bez slike''')
 
-    def edit(self, poruka) -> telegram.Message:
+    def edit_msg(self, poruka) -> telegram.Message:
         ''' Funkcija edituje prethodno poslatu poruku'''
         try:
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID,
                                            message_id=poruka.message_id,
                                            text="\n".join([self.naslov,
-                                                           self.sadrzaj]),
-                                           parse_mode='html')
+                                                           self.sadrzaj]),)
 
         except telegram.error.BadRequest as err:
             logging.warning(
@@ -128,9 +129,8 @@ class TelegramObavestenje:
                 šaljemo poruku kao plain text bez HTML formatiranja''')
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID,
                                            message_id=poruka.message_id,
-                                           text="\n".join([self.naslov,
-                                                           self.html_sadrzaj.text]),
-                                           parse_mode='html')
+                                           text="\n".join([self.naslov_text,
+                                                           self.sadrzaj_text]))
         return poruka
 
 
@@ -173,34 +173,34 @@ def main():
             naslov = studenti.soup.select('h3[class="subheading"]')[0]
             sadrzaj = studenti.soup.select('div[class="timeline-body"]')[0]
 
-            obavestenje = TelegramObavestenje(naslov, sadrzaj)
+            tg = TelegramObavestenje(naslov, sadrzaj)
 
-            poklapanjeNaslova = poklapanje(
-                obavestenje.html_naslov, prethodni_naslov
+            poklapanje_naslova = poklapanje(
+                naslov.text, prethodni_naslov
                 )
-            poklapanjeSadrzaja = poklapanje(
-                obavestenje.html_sadrzaj, prethodni_sadrzaj
+            poklapanje_sadrzaja = poklapanje(
+                sadrzaj.text, prethodni_sadrzaj
                 )
 
-            if poklapanjeNaslova < 0.85 or poklapanjeSadrzaja < 0.85:
-                # korisnik se obavestava porukom putem obavestenje.send_msg()
-                aktuelna_poruka = obavestenje.send_msg()
+            if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
+                # korisnik se obavestava porukom putem tg.send_msg()
+                aktuelna_poruka = tg.send_msg()
                 # ako su uz obavestenje prilozene slike,
                 # te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0:
                     for tag in sadrzaj.find_all('img'):
-                        obavestenje.send_img(tag['src'])
+                        tg.send_img(tag['src'])
             else:
-                aktuelna_poruka = obavestenje.edit(aktuelna_poruka)
+                aktuelna_poruka = tg.edit_msg(aktuelna_poruka)
             # stari i azurni hash se salju u log
             logging.info(studenti_inithash + " =/= " + studenti_newhash)
 
             # naslov poslatog obavestenja se setuje kao prethodni_naslov,
             # radi poredjenja sa naslovom sledećeg obaveštenja
-            prethodni_naslov = obavestenje.html_naslov
+            prethodni_naslov = naslov.text
             # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj,
             # radi poređenja sa sadržajem sledećeg obaveštenja
-            prethodni_sadrzaj = obavestenje.html_sadrzaj
+            prethodni_sadrzaj = sadrzaj.text
 
             # pocetna vrednost hasha se setuje na novu azurnu vrednost
             studenti_inithash = studenti_newhash
@@ -212,25 +212,26 @@ def main():
             # prvi element liste sadrzaja svih obavestenja sa sajta
             sadrzaj = obavestenja.soup.select('div[class="entry-content"]')[0]
 
-            obavestenje = TelegramObavestenje(naslov, sadrzaj)
+            tg = TelegramObavestenje(naslov, sadrzaj)
 
-            poklapanjeNaslova = poklapanje(
-                obavestenje.html_naslov, prethodni_naslov
+            poklapanje_naslova = poklapanje(
+                naslov.text, prethodni_naslov
                 )
-            poklapanjeSadrzaja = poklapanje(
-                obavestenje.html_sadrzaj, prethodni_sadrzaj
+            poklapanje_sadrzaja = poklapanje(
+                sadrzaj.text, prethodni_sadrzaj
                 )
 
-            if poklapanjeNaslova < 0.85 or poklapanjeSadrzaja < 0.85:
-                aktuelna_poruka = obavestenje.send_msg()
+            if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
+                # korisnik se obavestava porukom putem tg.send_msg()
+                aktuelna_poruka = tg.send_msg()
                 # ako su uz obavestenje prilozene slike,
                 # te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0:
                     for tag in sadrzaj.find_all('img'):
-                        obavestenje.send_img(tag['src'])
+                        tg.send_img(tag['src'])
             else:
                 try:
-                    aktuelna_poruka = obavestenje.edit(aktuelna_poruka)
+                    aktuelna_poruka = tg.edit_msg(aktuelna_poruka)
                 except telegram.error.BadRequest:
                     pass
 
@@ -239,10 +240,10 @@ def main():
 
             # naslov poslatog obavestenja se setuje kao prethodni_naslov,
             # radi poredjenja sa naslovom sledećeg obaveštenja
-            prethodni_naslov = obavestenje.html_naslov
+            prethodni_naslov = naslov.text
             # sadrzaj poslatog obavestenja se setuje kao prethodni_sadrzaj,
             # radi poređenja sa sadržajem sledećeg obaveštenja
-            prethodni_sadrzaj = obavestenje.html_sadrzaj
+            prethodni_sadrzaj = sadrzaj.text
             # pocetna vrednost hasha se setuje na novu azurnu vrednost
             obavestenja_inithash = obavestenja_newhash
         else:
