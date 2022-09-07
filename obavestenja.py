@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
-import os
 import time
 import logging
 import hashlib
 import telegram
-import http.client
 
-from urllib.error import URLError
+from os import getenv
 from dotenv import load_dotenv
-from difflib import SequenceMatcher
 from urllib.request import urlopen, Request
+from urllib.error import URLError
+from http.client import RemoteDisconnected
+from difflib import SequenceMatcher
 from bs4 import BeautifulSoup
 
 # statičke globalne varijable
@@ -21,9 +21,9 @@ URL = ["https://odseknis.akademijanis.edu.rs/studenti/",
 load_dotenv()
 
 # ucitavanje env varijabli
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-UPDATE_INTERVAL = int(os.getenv('UPDATE_INTERVAL'))
+TELEGRAM_BOT_TOKEN = getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = getenv('TELEGRAM_CHAT_ID')
+UPDATE_INTERVAL = int(getenv('UPDATE_INTERVAL'))
 
 # telegram bot objekat
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
@@ -52,7 +52,7 @@ class Sajt:
                             headers={'User-Agent': 'Mozilla/5.0'})).read()
                 self.soup = BeautifulSoup(self.html, features="html.parser")
                 break
-            except (URLError, http.client.RemoteDisconnected) as error:
+            except (URLError, RemoteDisconnected) as error:
                 logging.error(
                     f'''{error} - greška pri učitavanju sajta.
                     pokušavamo ponovo..({p}/16)'''
