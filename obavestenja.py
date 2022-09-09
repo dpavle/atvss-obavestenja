@@ -12,6 +12,7 @@ from urllib.error import URLError
 from http.client import RemoteDisconnected
 from difflib import SequenceMatcher
 from bs4 import BeautifulSoup
+from discord_webhook import DiscordWebhook, DiscordEmbed
 
 # statičke globalne varijable
 URL = ["https://odseknis.akademijanis.edu.rs/studenti/",
@@ -23,10 +24,14 @@ load_dotenv()
 # ucitavanje env varijabli
 TELEGRAM_BOT_TOKEN = getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = getenv('TELEGRAM_CHAT_ID')
+DISCORD_WEBHOOK_URL = getenv('DISCORD_WEBHOOK_URL')
 UPDATE_INTERVAL = int(getenv('UPDATE_INTERVAL'))
 
 # telegram bot objekat
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
+
+# discord Webhook objekat
+webhook = DiscordWebhook(url=DISCORD_WEBHOOK_URL)
 
 logging.basicConfig(filename='./obavestenja.log',
                     encoding='utf-8',
@@ -41,6 +46,18 @@ def poklapanje(a, b) -> float:
 def hash(content) -> str:
     ''' Funkcija generiše hash datog argumenta '''
     return hashlib.sha224(str(content).encode('utf-8')).hexdigest()
+
+
+def omotac(string, omot) -> str:
+    ''' Funkcija obavija dati string argument u zadati omot'''
+    if omot == "(":
+        return omot + string + ")"
+    elif omot == "{":
+        return omot + string + "}"
+    elif omot == "[":
+        return omot + string + "]"
+    else:
+        return omot + string + omot
 
 
 class Sajt:
@@ -107,6 +124,7 @@ class TelegramObavestenje:
         return poruka
 
     def send_img(self, src) -> telegram.Message:
+        ''' Funcija šalje sliku sa datog linka na Telegram '''
         try:
             bot.send_photo(TELEGRAM_CHAT_ID, src, parse_mode='html')
         except telegram.error.BadRequest as err:
@@ -116,7 +134,7 @@ class TelegramObavestenje:
                             šaljemo poruku bez slike''')
 
     def edit_msg(self, poruka) -> telegram.Message:
-        ''' Funkcija edituje prethodno poslatu poruku'''
+        ''' Funkcija edituje prethodno poslatu Telegram poruku '''
         try:
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID,
                                            message_id=poruka.message_id,
@@ -132,6 +150,62 @@ class TelegramObavestenje:
                                            text="\n".join([self.naslov_text,
                                                            self.sadrzaj_text]))
         return poruka
+
+
+class DiscordObavestenje:
+    def __init__(self, naslov, sadrzaj):
+        ''' init funkcija obrađuje naslov i sadržaj
+            u oblik pogodan za slanje preko Diskorda '''
+        # cuvamo tekstualne oblike naslova i sadrzaja
+        # (bez HTML formatiranja)
+        self.naslov_text = naslov.text
+        self.sadrzaj_text = sadrzaj.text
+
+        # formatiranje naslova
+        self.naslov = omotac(self.naslov_text, "***")
+        # obavijamo naslov u markdown bold markere
+        # formatiranje sadrzaja
+        self.sadrzaj = sadrzaj.text  # sadrzaj se prvo konvertuje u plain text
+        for tag in sadrzaj.find_all():
+            # ako se u originalnom html obliku sadrzaja nadju podrzani tagovi
+            if tag.name == "strong":
+                bold = omotac(str(tag.string), "***")
+                self.sadrzaj = self.sadrzaj.replace(str(tag.string), bold)
+            elif tag.name == "span":
+                underline = omotac(str(tag.string), "__")
+                self.sadrzaj = self.sadrzaj.replace(str(tag.string), underline)
+            elif tag.name == "a":
+                link = str(tag.attrs['href'])
+                hyperlink = omotac(str(tag.string), "[") + omotac(link, "(")
+                self.sadrzaj = self.sadrzaj.replace(str(tag.string), hyperlink)
+            # obavijamo podrzane tagove u ekvivalentne markdown markere
+
+    def send_msg(self):
+        ''' Funkcija konstruiše i šalje poruku Discord webhook-u '''
+        poruka = DiscordEmbed(title=self.naslov,
+                              description=self.sadrzaj,
+                              color='03b2f8')
+        webhook.add_embed(poruka)
+        sent_webhook = webhook.execute()
+
+        return sent_webhook
+
+    def edit_msg(self, poruka: list):
+        ''' Funkcija edituje prethodno poslatu Discord poruku '''
+        # menjamo embed sadržaj postojećeg webhook-a
+        webhook.embeds[0]["title"] = self.naslov
+        webhook.embeds[0]["description"] = self.sadrzaj
+        edited_webhook = webhook.edit(poruka)
+
+        return edited_webhook
+
+    def send_img(self, src):
+        ''' Funcija kreira novi webhook objekat i
+        šalje sliku sa datog linka preko istog '''
+        imagehook = DiscordWebhook(url=DISCORD_WEBHOOK_URL, content=src)
+        sent_imagehook = imagehook.execute()
+
+        return sent_imagehook
 
 
 def main():
@@ -174,6 +248,7 @@ def main():
             sadrzaj = studenti.soup.select('div[class="timeline-body"]')[0]
 
             tg = TelegramObavestenje(naslov, sadrzaj)
+            disc = DiscordObavestenje(naslov, sadrzaj)
 
             poklapanje_naslova = poklapanje(
                 naslov.text, prethodni_naslov
@@ -185,13 +260,19 @@ def main():
             if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
                 # korisnik se obavestava porukom putem tg.send_msg()
                 telegram_poruka = tg.send_msg()
+                discord_poruka = disc.send_msg()
                 # ako su uz obavestenje prilozene slike,
                 # te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0:
                     for tag in sadrzaj.find_all('img'):
                         tg.send_img(tag['src'])
+                        disc.send_img(tag['src'])
             else:
-                telegram_poruka = tg.edit_msg(telegram_poruka)
+                try:
+                    telegram_poruka = tg.edit_msg(telegram_poruka)
+                    discord_poruka = disc.edit_msg(discord_poruka)
+                except telegram.error.BadRequest:
+                    pass
             # stari i azurni hash se salju u log
             logging.info(studenti_inithash + " =/= " + studenti_newhash)
 
@@ -213,6 +294,7 @@ def main():
             sadrzaj = obavestenja.soup.select('div[class="entry-content"]')[0]
 
             tg = TelegramObavestenje(naslov, sadrzaj)
+            disc = DiscordObavestenje(naslov, sadrzaj)
 
             poklapanje_naslova = poklapanje(
                 naslov.text, prethodni_naslov
@@ -224,14 +306,17 @@ def main():
             if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
                 # korisnik se obavestava porukom putem tg.send_msg()
                 telegram_poruka = tg.send_msg()
+                discord_poruka = disc.send_msg()
                 # ako su uz obavestenje prilozene slike,
                 # te slike se salju posebno nakon originalne poruke
                 if len(sadrzaj.find_all('img')) > 0:
                     for tag in sadrzaj.find_all('img'):
                         tg.send_img(tag['src'])
+                        disc.send_img(tag['src'])
             else:
                 try:
                     telegram_poruka = tg.edit_msg(telegram_poruka)
+                    discord_poruka = disc.edit_msg(discord_poruka)
                 except telegram.error.BadRequest:
                     pass
 
