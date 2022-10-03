@@ -121,7 +121,8 @@ class TelegramObavestenje:
             poruka = bot.edit_message_text(chat_id=TELEGRAM_CHAT_ID,
                                            message_id=poruka.message_id,
                                            text="\n".join([self.naslov,
-                                                           self.sadrzaj]),)
+                                                           self.sadrzaj]),
+                                            parse_mode="html")
 
         except telegram.error.BadRequest as err:
             logging.warning(
@@ -181,8 +182,9 @@ def main():
             poklapanje_sadrzaja = poklapanje(
                 sadrzaj.text, prethodni_sadrzaj
                 )
-
-            if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
+            if 0.85 < poklapanje_naslova < 1 or 0.85 < poklapanje_sadrzaja < 1:
+                telegram_poruka = tg.edit_msg(telegram_poruka)
+            else:
                 # korisnik se obavestava porukom putem tg.send_msg()
                 telegram_poruka = tg.send_msg()
                 # ako su uz obavestenje prilozene slike,
@@ -190,8 +192,6 @@ def main():
                 if len(sadrzaj.find_all('img')) > 0:
                     for tag in sadrzaj.find_all('img'):
                         tg.send_img(tag['src'])
-            else:
-                telegram_poruka = tg.edit_msg(telegram_poruka)
             # stari i azurni hash se salju u log
             logging.info(studenti_inithash + " =/= " + studenti_newhash)
 
@@ -221,7 +221,10 @@ def main():
                 sadrzaj.text, prethodni_sadrzaj
                 )
 
-            if poklapanje_naslova < 0.85 or poklapanje_sadrzaja < 0.85:
+            if 0.85 < poklapanje_naslova < 1 or 0.85 < poklapanje_sadrzaja < 1:
+                telegram_poruka = tg.edit_msg(telegram_poruka)
+            # stari i azurni hash se salju u log
+            else:
                 # korisnik se obavestava porukom putem tg.send_msg()
                 telegram_poruka = tg.send_msg()
                 # ako su uz obavestenje prilozene slike,
@@ -229,11 +232,6 @@ def main():
                 if len(sadrzaj.find_all('img')) > 0:
                     for tag in sadrzaj.find_all('img'):
                         tg.send_img(tag['src'])
-            else:
-                try:
-                    telegram_poruka = tg.edit_msg(telegram_poruka)
-                except telegram.error.BadRequest:
-                    pass
 
             # stari i azurni hash se salju u log
             logging.info(obavestenja_inithash + " =/= " + obavestenja_newhash)
